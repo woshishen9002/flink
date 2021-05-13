@@ -18,6 +18,7 @@
 
 package org.apache.flink.connector.jdbc.internal;
 
+import org.apache.commons.math3.exception.NumberIsTooLargeException;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.functions.RuntimeContext;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -102,6 +103,10 @@ public class JdbcBatchingOutputFormat<In, JdbcIn, JdbcExec extends JdbcBatchStat
 		this.jdbcRecordExtractor = checkNotNull(recordExtractor);
 	}
 
+	//wh add
+	private int totalCount = 0;
+	private Long MAX_TOTAL_COUNT=100*10000L;
+
 	/**
 	 * Connects to the target database and initializes the prepared statement.
 	 *
@@ -147,7 +152,7 @@ public class JdbcBatchingOutputFormat<In, JdbcIn, JdbcExec extends JdbcBatchStat
 	public final synchronized void writeRecord(In record) throws IOException {
 		checkFlushException();
 
-		try {
+		try { //写数据
 			addToBatch(record, jdbcRecordExtractor.apply(record));
 			batchCount++;
 			if (batchCount >= executionOptions.getBatchSize()) {
@@ -169,16 +174,50 @@ public class JdbcBatchingOutputFormat<In, JdbcIn, JdbcExec extends JdbcBatchStat
 		for (int i = 1; i <= executionOptions.getMaxRetries(); i++) {
 			try {
 				attemptFlush();
+				/*if(batchCount>0){
+					LOG.info("---------插入db数据.batchCount={}", batchCount);
+				}*/
+
+				totalCount+=batchCount;
 				batchCount = 0;
+
+				if(totalCount >= MAX_TOTAL_COUNT){
+					int tmp_count = totalCount;
+					totalCount = 0;
+					try {
+						Thread.sleep(2000);
+						connection.close();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					connection = null;
+					throw new NumberIsTooLargeException(tmp_count, MAX_TOTAL_COUNT, true);
+				}
+
 				break;
+			} catch (NumberIsTooLargeException e){
+				LOG.warn("写入数据超过最大值，将重置连接.{}", e.getMessage());
+				try {
+					//重新获取连接
+					if (connection==null || !connection.isValid(CONNECTION_CHECK_TIMEOUT_SECONDS)) {
+						connection = connectionProvider.reestablishConnection(true);
+						jdbcStatementExecutor.closeStatements();
+						jdbcStatementExecutor.prepareStatements(connection);
+					}
+				} catch (Exception excpetion) {
+					LOG.error("JDBC connection is not valid, and reestablish connection failed.", excpetion);
+					throw new IOException("Reestablish JDBC connection failed", excpetion);
+				}
+
 			} catch (SQLException e) {
 				LOG.error("JDBC executeBatch error, retry times = {}", i, e);
 				if (i >= executionOptions.getMaxRetries()) {
 					throw new IOException(e);
 				}
 				try {
-					if (!connection.isValid(CONNECTION_CHECK_TIMEOUT_SECONDS)) {
-						connection = connectionProvider.reestablishConnection();
+					//重新获取连接
+					if (connection==null || !connection.isValid(CONNECTION_CHECK_TIMEOUT_SECONDS)) {
+						connection = connectionProvider.reestablishConnection(false);
 						jdbcStatementExecutor.closeStatements();
 						jdbcStatementExecutor.prepareStatements(connection);
 					}

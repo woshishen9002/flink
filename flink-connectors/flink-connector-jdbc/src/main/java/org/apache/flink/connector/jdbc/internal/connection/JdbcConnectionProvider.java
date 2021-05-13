@@ -26,7 +26,13 @@ import java.sql.Connection;
  */
 @Internal
 public interface JdbcConnectionProvider {
+
 	Connection getConnection() throws Exception;
+	//wh add
+	Connection getConnection(int taskNumber, int numTasks) throws Exception;
 
 	Connection reestablishConnection() throws Exception;
+
+	//wh add
+	Connection reestablishConnection(boolean isTotalCountTooLarge) throws Exception;
 }

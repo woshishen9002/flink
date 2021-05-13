@@ -158,7 +158,7 @@ public class JdbcDynamicTableFactory implements DynamicTableSourceFactory, Dynam
 		JdbcOptions jdbcOptions = getJdbcOptions(config);
 		TableSchema physicalSchema = TableSchemaUtils.getPhysicalSchema(context.getCatalogTable().getSchema());
 
-		return new JdbcDynamicTableSink(
+		return new JdbcDynamicTableSink( //
 			jdbcOptions,
 			getJdbcExecutionOptions(config),
 			getJdbcDmlOptions(jdbcOptions, physicalSchema),

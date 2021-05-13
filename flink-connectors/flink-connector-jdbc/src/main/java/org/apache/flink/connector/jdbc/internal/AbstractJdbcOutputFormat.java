@@ -56,14 +56,18 @@ public abstract class AbstractJdbcOutputFormat<T> extends RichOutputFormat<T> im
 	@Override
 	public void open(int taskNumber, int numTasks) throws IOException {
 		try {
-			establishConnection();
+			establishConnection(taskNumber, numTasks);
 		} catch (Exception e) {
 			throw new IOException("unable to open JDBC writer", e);
 		}
 	}
 
-	protected void establishConnection() throws Exception {
+	/*protected void establishConnection() throws Exception {
 		connection = connectionProvider.getConnection();
+	}*/
+
+	protected void establishConnection(int taskNumber, int numTasks) throws Exception {
+		connection = connectionProvider.getConnection(taskNumber, numTasks);
 	}
 
 	@Override
