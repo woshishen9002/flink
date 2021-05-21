@@ -55,6 +55,7 @@ public class JdbcUpsertTableSink implements UpsertStreamTableSink<Row> {
 	private final int flushMaxSize;
 	private final long flushIntervalMills;
 	private final int maxRetryTime;
+	private final long maxTotalCount;
 
 	private String[] keyFields;
 	private boolean isAppendOnly;
@@ -64,12 +65,14 @@ public class JdbcUpsertTableSink implements UpsertStreamTableSink<Row> {
 			JdbcOptions options,
 			int flushMaxSize,
 			long flushIntervalMills,
-			int maxRetryTime) {
+			int maxRetryTime,
+			long maxTotalCount) {
 		this.schema = TableSchemaUtils.checkNoGeneratedColumns(schema);
 		this.options = options;
 		this.flushMaxSize = flushMaxSize;
 		this.flushIntervalMills = flushIntervalMills;
 		this.maxRetryTime = maxRetryTime;
+		this.maxTotalCount = maxTotalCount;
 	}
 
 	private JdbcBatchingOutputFormat<Tuple2<Boolean, Row>, Row, JdbcBatchStatementExecutor<Row>> newFormat() {
@@ -87,6 +90,7 @@ public class JdbcUpsertTableSink implements UpsertStreamTableSink<Row> {
 			.setFlushMaxSize(flushMaxSize)
 			.setFlushIntervalMills(flushIntervalMills)
 			.setMaxRetryTimes(maxRetryTime)
+			.setMaxTotalCount(maxTotalCount)
 			.setFieldTypes(jdbcSqlTypes)
 			.setKeyFields(keyFields)
 			.build();
@@ -138,7 +142,7 @@ public class JdbcUpsertTableSink implements UpsertStreamTableSink<Row> {
 					"But was: " + Arrays.toString(fieldNames) + " / " + Arrays.toString(fieldTypes));
 		}
 
-		JdbcUpsertTableSink copy = new JdbcUpsertTableSink(schema, options, flushMaxSize, flushIntervalMills, maxRetryTime);
+		JdbcUpsertTableSink copy = new JdbcUpsertTableSink(schema, options, flushMaxSize, flushIntervalMills, maxRetryTime, maxTotalCount);
 		copy.keyFields = keyFields;
 		return copy;
 	}
@@ -156,6 +160,7 @@ public class JdbcUpsertTableSink implements UpsertStreamTableSink<Row> {
 				Objects.equals(flushMaxSize, sink.flushMaxSize) &&
 				Objects.equals(flushIntervalMills, sink.flushIntervalMills) &&
 				Objects.equals(maxRetryTime, sink.maxRetryTime) &&
+				Objects.equals(maxTotalCount, sink.maxTotalCount) &&
 				Arrays.equals(keyFields, sink.keyFields) &&
 				Objects.equals(isAppendOnly, sink.isAppendOnly);
 		} else {
@@ -172,6 +177,7 @@ public class JdbcUpsertTableSink implements UpsertStreamTableSink<Row> {
 		protected int flushMaxSize = AbstractJdbcOutputFormat.DEFAULT_FLUSH_MAX_SIZE;
 		protected long flushIntervalMills = AbstractJdbcOutputFormat.DEFAULT_FLUSH_INTERVAL_MILLS;
 		protected int maxRetryTimes = JdbcExecutionOptions.DEFAULT_MAX_RETRY_TIMES;
+		protected long maxTotalCount = JdbcExecutionOptions.DEFAULT_MAX_TOTAL_COUNT;
 
 		/**
 		 * required, table schema of this table source.
@@ -217,7 +223,7 @@ public class JdbcUpsertTableSink implements UpsertStreamTableSink<Row> {
 		public JdbcUpsertTableSink build() {
 			checkNotNull(schema, "No schema supplied.");
 			checkNotNull(options, "No options supplied.");
-			return new JdbcUpsertTableSink(schema, options, flushMaxSize, flushIntervalMills, maxRetryTimes);
+			return new JdbcUpsertTableSink(schema, options, flushMaxSize, flushIntervalMills, maxRetryTimes, maxTotalCount);
 		}
 	}
 }

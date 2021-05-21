@@ -28,19 +28,22 @@ import java.util.Objects;
  */
 @PublicEvolving
 public class JdbcExecutionOptions implements Serializable {
-	public static final int DEFAULT_MAX_RETRY_TIMES = 10; //由3改为10
+	public static final int DEFAULT_MAX_RETRY_TIMES = 5; //由3改为5
 	private static final int DEFAULT_INTERVAL_MILLIS = 0;
 	public static final int DEFAULT_SIZE = 5000;
+	public static final long DEFAULT_MAX_TOTAL_COUNT= 10*10000L; //默认并行度小于url地址ip个数时，切换ip最大数据条数阈值
 
 	private final long batchIntervalMs;
 	private final int batchSize;
 	private final int maxRetries;
+	private final long maxTotalCount;
 
-	private JdbcExecutionOptions(long batchIntervalMs, int batchSize, int maxRetries) {
+	private JdbcExecutionOptions(long batchIntervalMs, int batchSize, int maxRetries, long maxTotalCount) {
 		Preconditions.checkArgument(maxRetries >= 1);
 		this.batchIntervalMs = batchIntervalMs;
 		this.batchSize = batchSize;
 		this.maxRetries = maxRetries;
+		this.maxTotalCount = maxTotalCount;
 	}
 
 	public long getBatchIntervalMs() {
@@ -55,6 +58,10 @@ public class JdbcExecutionOptions implements Serializable {
 		return maxRetries;
 	}
 
+	public long getMaxTotalCount() {
+		return maxTotalCount;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -66,12 +73,13 @@ public class JdbcExecutionOptions implements Serializable {
 		JdbcExecutionOptions that = (JdbcExecutionOptions) o;
 		return batchIntervalMs == that.batchIntervalMs &&
 			batchSize == that.batchSize &&
-			maxRetries == that.maxRetries;
+			maxRetries == that.maxRetries &&
+			maxTotalCount == that.maxTotalCount;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(batchIntervalMs, batchSize, maxRetries);
+		return Objects.hash(batchIntervalMs, batchSize, maxRetries, maxTotalCount);
 	}
 
 	public static Builder builder() {
@@ -89,6 +97,7 @@ public class JdbcExecutionOptions implements Serializable {
 		private long intervalMs = DEFAULT_INTERVAL_MILLIS;
 		private int size = DEFAULT_SIZE;
 		private int maxRetries = DEFAULT_MAX_RETRY_TIMES;
+		private long maxTotalCount = DEFAULT_MAX_TOTAL_COUNT;
 
 		public Builder withBatchSize(int size) {
 			this.size = size;
@@ -105,8 +114,13 @@ public class JdbcExecutionOptions implements Serializable {
 			return this;
 		}
 
+		public Builder withMaxTotalCount(long maxTotalCount) {
+			this.maxTotalCount = maxTotalCount;
+			return this;
+		}
+
 		public JdbcExecutionOptions build() {
-			return new JdbcExecutionOptions(intervalMs, size, maxRetries);
+			return new JdbcExecutionOptions(intervalMs, size, maxRetries, maxTotalCount);
 		}
 	}
 }

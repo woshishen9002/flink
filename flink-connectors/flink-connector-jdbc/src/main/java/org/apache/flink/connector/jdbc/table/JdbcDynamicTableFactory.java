@@ -126,7 +126,7 @@ public class JdbcDynamicTableFactory implements DynamicTableSourceFactory, Dynam
 	private static final ConfigOption<Integer> LOOKUP_MAX_RETRIES = ConfigOptions
 		.key("lookup.max-retries")
 		.intType()
-		.defaultValue(3)
+		.defaultValue(5)
 		.withDescription("the max retry times if lookup database failed.");
 
 	// write config options
@@ -147,12 +147,17 @@ public class JdbcDynamicTableFactory implements DynamicTableSourceFactory, Dynam
 		.intType()
 		.defaultValue(3)
 		.withDescription("the max retry times if writing records to database failed.");
+	private static final ConfigOption<Long> SINK_PER_IP_MAX_TOTAL_COUNT = ConfigOptions
+		.key("sink.per-ip-max-toal-count")
+		.longType()
+		.defaultValue(10*10000L)
+		.withDescription("when use ck local_table , the max total count per node to sink, then it will use other node to sink.");
 
 	@Override
 	public DynamicTableSink createDynamicTableSink(Context context) {
 		final FactoryUtil.TableFactoryHelper helper = FactoryUtil.createTableFactoryHelper(this, context);
 		final ReadableConfig config = helper.getOptions();
-
+		//校验参数
 		helper.validate();
 		validateConfigOptions(config);
 		JdbcOptions jdbcOptions = getJdbcOptions(config);
@@ -218,6 +223,7 @@ public class JdbcDynamicTableFactory implements DynamicTableSourceFactory, Dynam
 		builder.withBatchSize(config.get(SINK_BUFFER_FLUSH_MAX_ROWS));
 		builder.withBatchIntervalMs(config.get(SINK_BUFFER_FLUSH_INTERVAL).toMillis());
 		builder.withMaxRetries(config.get(SINK_MAX_RETRIES));
+		builder.withMaxTotalCount(config.get(SINK_PER_IP_MAX_TOTAL_COUNT));
 		return builder.build();
 	}
 
@@ -264,6 +270,7 @@ public class JdbcDynamicTableFactory implements DynamicTableSourceFactory, Dynam
 		optionalOptions.add(SINK_BUFFER_FLUSH_MAX_ROWS);
 		optionalOptions.add(SINK_BUFFER_FLUSH_INTERVAL);
 		optionalOptions.add(SINK_MAX_RETRIES);
+		optionalOptions.add(SINK_PER_IP_MAX_TOTAL_COUNT); //wh add , 用于鉴别sql 参数合法性
 		return optionalOptions;
 	}
 

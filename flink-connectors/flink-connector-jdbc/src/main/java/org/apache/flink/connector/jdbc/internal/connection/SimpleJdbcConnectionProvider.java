@@ -49,7 +49,7 @@ public class SimpleJdbcConnectionProvider implements JdbcConnectionProvider, Ser
 
 	private int taskNumber;
 	private int numTasks;
-	private Map<String, Long> dbURLMap; //key是url ,value是最近的不可用时间戳，如果超过5分钟，则会重新变为可用
+	private Map<String, Long> dbURLMap; //key是url ,value是最近的不可用时间戳，如果超过1分钟，则会重新变为可用
 	private List<String> dbURLArray;
 	private String currentDbUrl;
 
@@ -199,9 +199,11 @@ public class SimpleJdbcConnectionProvider implements JdbcConnectionProvider, Ser
 			connection = null;
 		}
 
-		//设置对应的url为不可用
-		dbURLMap.put(currentDbUrl, System.currentTimeMillis());
-		LOG.info("taskNumber:{}-------开始重新获取连接", taskNumber);
+		if(dbURLMap != null){
+			//设置对应的url为不可用
+			dbURLMap.put(currentDbUrl, System.currentTimeMillis());
+			LOG.info("taskNumber:{}-------开始重新获取连接", taskNumber);
+		}
 
 		connection = getConnection(taskNumber, numTasks);
 		return connection;
@@ -217,13 +219,15 @@ public class SimpleJdbcConnectionProvider implements JdbcConnectionProvider, Ser
 			connection = null;
 		}
 
-		if(isTotalCountTooLarge){
-			dbURLMap.put(currentDbUrl, -1L); //-1表示可用，但是建议当前不使用
-			LOG.info("taskNumber:{}-------isTotalCountTooLarge, 开始重新获取连接", taskNumber);
-		}else{
-			//设置对应的url为不可用
-			dbURLMap.put(currentDbUrl, System.currentTimeMillis());
-			LOG.info("taskNumber:{}-------开始重新获取连接", taskNumber);
+		if(dbURLMap != null){
+			if(isTotalCountTooLarge){
+				dbURLMap.put(currentDbUrl, -1L); //-1表示可用，但是建议当前不使用
+				LOG.info("taskNumber:{}-------isTotalCountTooLarge, 开始重新获取连接", taskNumber);
+			}else{
+				//设置对应的url为不可用
+				dbURLMap.put(currentDbUrl, System.currentTimeMillis());
+				LOG.info("taskNumber:{}-------开始重新获取连接", taskNumber);
+			}
 		}
 
 		connection = getConnection(taskNumber, numTasks);

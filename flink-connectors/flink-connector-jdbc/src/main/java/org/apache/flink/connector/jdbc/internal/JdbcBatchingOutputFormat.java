@@ -105,7 +105,7 @@ public class JdbcBatchingOutputFormat<In, JdbcIn, JdbcExec extends JdbcBatchStat
 
 	//wh add
 	private int totalCount = 0;
-	private Long MAX_TOTAL_COUNT=100*10000L;
+	//private Long MAX_TOTAL_COUNT=10*10000L;
 
 	/**
 	 * Connects to the target database and initializes the prepared statement.
@@ -181,8 +181,8 @@ public class JdbcBatchingOutputFormat<In, JdbcIn, JdbcExec extends JdbcBatchStat
 				totalCount+=batchCount;
 				batchCount = 0;
 
-				if(totalCount >= MAX_TOTAL_COUNT){
-					int tmp_count = totalCount;
+				if(totalCount >= executionOptions.getMaxTotalCount()){
+					int current_total_count = totalCount;
 					totalCount = 0;
 					try {
 						Thread.sleep(2000);
@@ -191,7 +191,7 @@ public class JdbcBatchingOutputFormat<In, JdbcIn, JdbcExec extends JdbcBatchStat
 						e.printStackTrace();
 					}
 					connection = null;
-					throw new NumberIsTooLargeException(tmp_count, MAX_TOTAL_COUNT, true);
+					throw new NumberIsTooLargeException(current_total_count, executionOptions.getMaxTotalCount(), true);
 				}
 
 				break;
@@ -341,6 +341,15 @@ public class JdbcBatchingOutputFormat<In, JdbcIn, JdbcExec extends JdbcBatchStat
 		 */
 		public Builder setMaxRetryTimes(int maxRetryTimes) {
 			executionOptionsBuilder.withMaxRetries(maxRetryTimes);
+			return this;
+		}
+
+		/**
+		 * wh add
+		 * optional, max total count write per ip for jdbc connector.
+		 */
+		public Builder setMaxTotalCount(long maxTotalCount) {
+			executionOptionsBuilder.withMaxTotalCount(maxTotalCount);
 			return this;
 		}
 
